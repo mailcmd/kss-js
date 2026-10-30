@@ -37,11 +37,11 @@ Someday...
 - If the expresion is closed inside [...] it will be rendered as javascript code but NOT RUNNED.
 
 ### Var references
-- $$ -> it is replaced by the context
+- $$ -> it is replaced by the relative context
 - ## -> it is replaced by the root context
 
 
 # TODO
-- [ ] Load templates (includes).
-- [ ] Make a way to create sandbox as small modules and integrate them in one APP.
+- [x] Load templates (includes).
+- [x] Make a way to create sandbox as small modules and integrate them in one APP.
 - [ ] Check nested structures.
