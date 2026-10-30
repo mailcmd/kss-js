@@ -43,6 +43,8 @@ function KSS(object, root_element) {
     ////////////////////////////////////////////////////////////////////////////////////////
     // Tools
     ////////////////////////////////////////////////////////////////////////////////////////
+    const log = console.log;
+
     const kss_push = function(object, key, item) {
         object[key] = object[key] ?? [];
         object[key].push(item);
@@ -54,9 +56,13 @@ function KSS(object, root_element) {
         - "5 + $$value + 1"
         - "'hola' + $$name"
     */
-    const kss_eval = function(expr, context, context_alias = null) {
+    const kss_eval = function(expr, context, context_alias = null, context_index = null, context_index_value = null) {
+console.log(expr, context, context_alias, context_index, context_index_value)        
         expr = context_alias
             ? expr.replace(new RegExp('\\$\\$'+context_alias, 'g'), '##'+context.slice(1)+'')
+            : expr;
+        expr = context_index
+            ? expr.replace(new RegExp('\\$\\$'+context_index, 'g'), context_index_value)
             : expr;
 
         // extract every kss_expr
@@ -90,12 +96,6 @@ function KSS(object, root_element) {
         }, expr);
     
         return result;
-        
-        // try {
-        //     return eval(result);
-        // } catch(e) {
-        //     return result;
-        // }
     };
 
     const kss_run = function(expr, context) {
@@ -115,11 +115,17 @@ function KSS(object, root_element) {
     // Processors
     ////////////////////////////////////////////////////////////////////////////////////////
     const process_foreach = function(elem, parent, context) {
-        const loopvar = elem.getAttribute(':foreach')
+        let loopvar = elem.getAttribute(':foreach');
+        if (parent.context_alias) {
+            const re = new RegExp('\\$\\$'+parent.context_alias, 'g');
+            loopvar = loopvar.replace(re, '##'+context.slice(1));
+        }
+        loopvar = loopvar
             .replace(/\$\$/g, context+'.')
             .replace(/\#\#/g, '.');
         const tpl = document.createElement('TEMPLATE');
         tpl.setAttribute(':as', elem.getAttribute(':as') ?? 'item');
+        tpl.setAttribute(':index', elem.getAttribute(':index') ?? 'idx');
         tpl.setAttribute(':foreach', loopvar);
         elem.removeAttribute(':foreach');
         elem.removeAttribute(':as');
@@ -131,7 +137,8 @@ function KSS(object, root_element) {
             elem: tpl,
             parent: parent,
             context: context,
-            item: tpl.getAttribute(':as')
+            item: tpl.getAttribute(':as'),
+            index: tpl.getAttribute(':index')
         });
     };
 
@@ -190,13 +197,10 @@ function KSS(object, root_element) {
     
     const process_attr = function(attr, parent, context) {
         const keys = new Set();
-        // attr.value.matchAll(/\$\$(.+?)( |\(|\)|$)/g).toArray().forEach( ([_, m]) => {
         attr.value.matchAll(VARKEY_REGEX_RELATIVE).toArray().forEach( ([_, m]) => {
-            // const key = context+'.'+m;
             const key = m != parent.context_alias ? context+'.'+m : context;
             keys.add(key);
         });
-        // attr.value.matchAll(/\#\#(.+?)( |\(|\)|$)/g).toArray().forEach( ([_, m]) => {
         attr.value.matchAll(VARKEY_REGEX_ABSOLUTE).toArray().forEach( ([_, m]) => {
             const key = '.'+m;
             keys.add(key);
@@ -248,11 +252,14 @@ function KSS(object, root_element) {
             .replace(/\$\$/g, foreach_obj.context+'.')
             .replace(/\#\#/g, '.');
         const iterator = deep_proxy.get(iterator_key);
+        
         try {
             for (const i in iterator) {
                 const item = iterator[i];
                 const el = foreach_obj.elem.content.children[0].cloneNode(true);
                 el.context_alias = foreach_obj.item;
+                el.context_index = foreach_obj.index;
+                el.context_index_value = i;
                 foreach_obj.elem.parentNode.lastElementChild.after(el);
                 refresh(el, iterator_key+'.'+i);
             }
@@ -298,14 +305,25 @@ function KSS(object, root_element) {
             };
             attr_obj.elem.setAttribute(attr_obj.attr, "KSS.run('"+attr_obj.attr+"', this)");
         } else {
-            const value = kss_eval(attr_obj.expr, attr_obj.context, attr_obj.parent.context_alias);
+            const value = kss_eval(
+                attr_obj.expr, 
+                attr_obj.context, 
+                attr_obj.parent.context_alias,
+                attr_obj.parent.context_index,
+                attr_obj.elem.context_index_value
+            );
             attr_obj.elem.setAttribute(attr_obj.attr, value);
         }
     };
 
     const render_text = function(text_obj) {
-        text_obj.elem.innerHTML =
-            kss_eval(text_obj.expr, text_obj.context, text_obj.parent.context_alias);
+        text_obj.elem.innerHTML = kss_eval(
+            text_obj.expr, 
+            text_obj.context, 
+            text_obj.parent.context_alias,
+            text_obj.parent.context_index,
+            text_obj.elem.context_index_value
+        );
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////

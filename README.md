@@ -1,3 +1,5 @@
+***WORK IN PROGRESS***
+
 # KSS-js 
 ## What is this?
 A small web reactive lib to do small projects without depend of big frameworks. 
@@ -26,6 +28,7 @@ Someday...
 ### Special attributes
 - :foreach
 - :as
+- :index
 - :if
 - :else-ref
 - :else 

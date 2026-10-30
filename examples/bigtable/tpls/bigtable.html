@@ -1,0 +1,16 @@
+<template kss-tpl-id="table">
+  <style>
+    .filled {
+      background-color: firebrick;
+      color: white;
+    }
+  </style>
+  <button onclick="[$$change()]">CHANGE</button><br>
+  <table border="2">
+    <tr :foreach="$$table" :as="row">
+      <td style="width: 32px;" class="{$$c}" :foreach="$$row" :as="col">
+        <text :content="{$$v}"></text>
+      </td>
+    </tr>
+  </table>
+</template>
