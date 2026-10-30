@@ -19,9 +19,9 @@ Someday...
   unnecessarily large macro-platforms. 
 
 ### Deps
-- Before doing KSS I made DProxy (deep proxy) to make it possible for KSS to work the way I wanted 
+- Before doing KSS I made [DProxy](https://github.com/mailcmd/dproxy-js) (deep proxy) to make it possible for KSS to work the way I wanted 
   it to. I keep both as sepated libs because DProxy can be used in many other projects. 
-- So, KSS depends only of DProxy.make 
+- So, KSS depends only of [DProxy](https://github.com/mailcmd/dproxy-js).
 
 ### Special attributes
 - :foreach
