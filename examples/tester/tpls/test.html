@@ -1,0 +1,20 @@
+<template kss-tpl-id="test">
+  <text :content="$$text + '5'"></text> capo
+  <table border="2">
+    <tr :foreach="$$form">
+      <td><text :content="$$item.name"></text></td>
+      <td><text :content="$$item.value * ##value"></text></td>
+    </tr>
+  </table>
+  
+  <span class="{$$label}a" xx="hola">IF</span>
+  <button onclick="[$$sum()]">
+    SUM
+  </button>
+  <div :if="$$value % 2 == 0" :else-ref="value_mod">
+    <text :content="$$value"></text> is par
+  </div>
+  <div :else="value_mod">
+    <text :content="$$value"></text> is impar
+  </div>
+</template>
