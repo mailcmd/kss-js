@@ -25,6 +25,7 @@ Someday...
 
 ### Special attributes
 - :foreach
+- :as
 - :if
 - :else-ref
 - :else 
