@@ -1,5 +1,14 @@
-# My notes
+# KSS-js 
+## What is this?
+A small web reactive lib to do small projects without depend of big frameworks. 
+As the saying goes: *“Don't use a sledgehammer to kill a fly.”*
 
+## DOC
+Someday...
+
+---- o -----
+
+## My notes for future doc
 ### About the name
 - KSS is pronounced 'keys' (kiːz)
 - KSS means "keep small and simple"
