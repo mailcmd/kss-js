@@ -57,7 +57,6 @@ function KSS(object, root_element) {
         - "'hola' + $$name"
     */
     const kss_eval = function(expr, context, context_alias = null, context_index = null, context_index_value = null) {
-console.log(expr, context, context_alias, context_index, context_index_value)        
         expr = context_alias
             ? expr.replace(new RegExp('\\$\\$'+context_alias, 'g'), '##'+context.slice(1)+'')
             : expr;
