@@ -8,8 +8,8 @@
   <button onclick="[$$change()]">CHANGE</button><br>
   <table border="2">
     <tr :foreach="$$table" :as="row">
-      <td style="width: 32px;" class="{$$c}" :foreach="$$row" :as="col">
-        <text :content="{$$v}"></text>
+      <td style="width: 32px;" class="{$$col.c}" :foreach="$$row" :as="col" :index="idx">
+        <text :content="{$$col.v} {$$idx}"></text>
       </td>
     </tr>
   </table>

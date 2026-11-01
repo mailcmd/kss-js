@@ -46,3 +46,4 @@ Someday...
 - [x] Load templates (includes).
 - [x] Make a way to create sandbox as small modules and integrate them in one APP.
 - [ ] Check nested structures.
+- [ ] Maybe add text nodes?

@@ -197,7 +197,10 @@ function KSS(object, root_element) {
     const process_attr = function(attr, parent, context) {
         const keys = new Set();
         attr.value.matchAll(VARKEY_REGEX_RELATIVE).toArray().forEach( ([_, m]) => {
-            const key = m != parent.context_alias ? context+'.'+m : context;
+            const len = parent.context_alias?.length ?? 0;
+            const key = m.slice(0, len) != parent.context_alias 
+                ? context+'.'+m 
+                : context + m.slice(len);
             keys.add(key);
         });
         attr.value.matchAll(VARKEY_REGEX_ABSOLUTE).toArray().forEach( ([_, m]) => {
@@ -223,14 +226,16 @@ function KSS(object, root_element) {
 
         const keys = new Set();
         expr.matchAll(VARKEY_REGEX_RELATIVE).toArray().forEach( ([_, m]) => {
-            const key = m != parent.context_alias ? context+'.'+m : context;
+            const len = parent.context_alias?.length ?? 0;
+            const key = m.slice(0, len) != parent.context_alias 
+                ? context+'.'+m 
+                : context + m.slice(len);
             keys.add(key);
         });
         expr.matchAll(VARKEY_REGEX_ABSOLUTE).toArray().forEach( ([_, m]) => {
             const key = '.'+m;
             keys.add(key);
         });
-
         [...keys].forEach( key => {
             kss_push(_this.renderizable_objects, key, {
                 type: 'text',
@@ -343,6 +348,7 @@ function KSS(object, root_element) {
     };
     
     const render_by_elem = function(elem) {
+        const rendered_objects = [];
         for (const k in _this.renderizable_objects) {
             _this.renderizable_objects[k].forEach( (obj,i) => {
                 if (!obj.elem.isConnected) {
@@ -351,21 +357,27 @@ function KSS(object, root_element) {
                 }
                 if (obj.parent != elem) return;
                 
+                if (rendered_objects.some( 
+                    o => o.type == obj.type && o.elem == obj.elem && o.expr == obj.expr) 
+                ) return;
+
+                obj.elem.context_index_value = elem.context_index_value;
+                
                 if (obj.type == 'foreach') render_foreach(obj);
                 if (obj.type == 'if') render_if(obj);
                 if (obj.type == 'attr') render_attr(obj);
                 if (obj.type == 'text') render_text(obj);
+                rendered_objects.push(obj);
             });
         }
     };
     
-    const render_by_key = function(key) {
+    const render_by_key = function(key, v) {
         (_this.renderizable_objects[key] ?? []).forEach( (obj,i) => {
             if (!obj.elem.isConnected) {
                 _this.renderizable_objects[key].remove(i);
                 return;
             }
-
             if (obj.type == 'foreach') render_foreach(obj);
             if (obj.type == 'if') render_if(obj);
             if (obj.type == 'attr') render_attr(obj);
