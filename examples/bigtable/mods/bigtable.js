@@ -1,7 +1,16 @@
 const ROWS = 3, COLS = 6;
 
 sandbox.datas = {
-    table: [...Array(ROWS).keys()].map( _ => [...Array(COLS).keys().map(_=>[{c: '', v: 0}][0])] ),
+    table: [...Array(ROWS).keys()].map( _ =>
+        [...Array(COLS).keys().map(_=>[{c: '', v: 0}][0])]
+    ),
+    uls: [
+        [1,2,3,4,5,6],
+        [1,2,3,4,5,6],
+        [1,2,3,4,5,6],
+        [1,2,3,4,5,6],
+        [1,2,3,4,5,6],
+    ],
     change: function() {
         const r = Math.trunc(Math.random()*ROWS);
         const c = Math.trunc(Math.random()*COLS);

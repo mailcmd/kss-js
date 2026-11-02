@@ -9,8 +9,8 @@ Object.defineProperty(Array.prototype, 'remove', {
 
 function KSS(object, root_element) {
     const _this = this;
-    const VARKEY_REGEX_RELATIVE = /\$\$([a-z0-9_\.]+)/ig;
-    const VARKEY_REGEX_ABSOLUTE = /\#\#([a-z0-9_\.]+)/ig;
+    const VARKEY_REGEX_RELATIVE = /\$\$([a-z0-9_\.\<]+)/ig;
+    const VARKEY_REGEX_ABSOLUTE = /\#\#([a-z0-9_\.\<]+)/ig;
 
     ////////////////////////////////////////////////////////////////////////////////////////
     // GETs
@@ -256,8 +256,7 @@ function KSS(object, root_element) {
             .replace(/\$\$/g, foreach_obj.context+'.')
             .replace(/\#\#/g, '.');
         const iterator = deep_proxy.get(iterator_key);
-        
-        try {
+        // try {
             for (const i in iterator) {
                 const item = iterator[i];
                 const el = foreach_obj.elem.content.children[0].cloneNode(true);
@@ -267,9 +266,9 @@ function KSS(object, root_element) {
                 foreach_obj.elem.parentNode.lastElementChild.after(el);
                 refresh(el, iterator_key+'.'+i);
             }
-        } catch(e) {
-            console.warn(`KSS_ERROR: '${iterator}' key is not an iterable object`);
-        }
+        // } catch(e) {
+        //     console.warn(`KSS_ERROR: '${iterator}' key is not an iterable object`);
+        // }
     };
     
     const render_if = function(if_obj) {
