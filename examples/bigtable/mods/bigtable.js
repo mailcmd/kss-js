@@ -14,7 +14,8 @@ sandbox.datas = {
     change: function() {
         const r = Math.trunc(Math.random()*ROWS);
         const c = Math.trunc(Math.random()*COLS);
-        this.table[r][c] = {c: 'filled', v: +(Math.random()*20).toFixed(0)};
+        this.table[r][c] = {c: 'filled', v: +(Math.random()*9).toFixed(0)};
+        setTimeout(()=>this.change(), 500);
     }
 };
 sandbox.tpl_id = 'table';

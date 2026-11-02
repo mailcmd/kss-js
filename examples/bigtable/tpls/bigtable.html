@@ -6,9 +6,9 @@
     }
   </style>
   <button onclick="[$$change()]">CHANGE</button><br>
-  <table border="2">
+  <table border="1">
     <tr :foreach="$$table" :as="row" :index="ridx">
-      <td style="width: 32px;" class="{$$col.c}" :foreach="$$row" :as="col" :index="cidx">
+      <td align="center" style="width: 32px;" class="{$$col.c}" :foreach="$$row" :as="col" :index="cidx">
         <text :content="{$$col.v}"></text>
       </td>
     </tr>
