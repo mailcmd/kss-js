@@ -9,14 +9,13 @@
   <table border="2">
     <tr :foreach="$$table" :as="row" :index="ridx">
       <td style="width: 32px;" class="{$$col.c}" :foreach="$$row" :as="col" :index="cidx">
-        <text :content="{$$col.v} {$$cidx}"></text>
+        <text :content="{$$col.v}"></text>
       </td>
     </tr>
   </table>
   <br/>
-  <text :content="{$$uls.1.1}"></text>
   <ul :foreach="$$uls" :as="ul" :index="uix">
-    <text :content="UL IDX: {$$ownIndex}"></text>
+    <text :content="UL IDX: {$$ownIndex} ->  {$$uix}"></text>
     <li :foreach="$$ul" :as="li" :index="ix">
       <text :content="{$$ix} -> {$$li} -> {$$ownIndex} -> {$$<ownIndex}"></text>
     </li>

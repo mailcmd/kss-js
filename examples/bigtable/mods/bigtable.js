@@ -1,4 +1,4 @@
-const ROWS = 3, COLS = 6;
+const ROWS = 30, COLS = 60;
 
 sandbox.datas = {
     table: [...Array(ROWS).keys()].map( _ =>
