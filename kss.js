@@ -9,8 +9,8 @@ Object.defineProperty(Array.prototype, 'remove', {
 
 function KSS(object, root_element) {
     const _this = this;
-    const VARKEY_REGEX_RELATIVE = /\$\$([a-z0-9_\.\<]+)/ig;
-    const VARKEY_REGEX_ABSOLUTE = /\#\#([a-z0-9_\.\<]+)/ig;
+    const VARKEY_REGEX_RELATIVE = /\$\$([a-z0-9_\.<]+)/ig;
+    const VARKEY_REGEX_ABSOLUTE = /\#\#([a-z0-9_\.<]+)/ig;
 
     ////////////////////////////////////////////////////////////////////////////////////////
     // GETs
@@ -25,6 +25,23 @@ function KSS(object, root_element) {
     
     const get_texts = function(elem) {
         return elem.querySelectorAll(':not(template) text');
+    };
+    
+    const get_text_nodes = function(elem) {
+        const cid = elem.getAttribute('cord-id');
+        const children = [];
+        const walker = document.createTreeWalker(elem, NodeFilter.SHOW_TEXT);
+        while(walker.nextNode()) {
+            const node = walker.currentNode;
+            if (node.textContent.trim().length == 0)
+                continue;
+            if (!node.textContent.match(/\{(.+?)\}/g)) 
+                continue;
+            if (node.parentElement.tagName == 'STYLE')
+                continue;
+            children.push(node);
+        }
+        return children;
     };
     
     const get_attributes = function(elem) {
@@ -56,12 +73,9 @@ function KSS(object, root_element) {
         - "5 + $$value + 1"
         - "'hola' + $$name"
     */
-    const kss_eval = function(expr, context, context_alias = null, context_index = null, context_index_value = null) {
+    const kss_eval = function(expr, context, context_alias = null) {
         expr = context_alias
             ? expr.replace(new RegExp('\\$\\$'+context_alias, 'g'), '##'+context.slice(1)+'')
-            : expr;
-        expr = context_index
-            ? expr.replace(new RegExp('\\$\\$'+context_index, 'g'), context_index_value)
             : expr;
 
         // extract every kss_expr
@@ -87,7 +101,7 @@ function KSS(object, root_element) {
                    }
                 });
             try {
-                exp = eval(exp);
+                exp = exp == '' ? exp : eval(exp);
             } catch(e) {
                 // console.log(e)
             }
@@ -124,11 +138,9 @@ function KSS(object, root_element) {
             .replace(/\#\#/g, '.');
         const tpl = document.createElement('TEMPLATE');
         tpl.setAttribute(':as', elem.getAttribute(':as') ?? 'item');
-        tpl.setAttribute(':index', elem.getAttribute(':index') ?? 'idx');
         tpl.setAttribute(':foreach', loopvar);
         elem.removeAttribute(':foreach');
         elem.removeAttribute(':as');
-        elem.removeAttribute(':index');
         tpl.innerHTML = elem.outerHTML;
         elem.before(tpl);
         elem.remove();
@@ -137,8 +149,7 @@ function KSS(object, root_element) {
             elem: tpl,
             parent: parent,
             context: context,
-            item: tpl.getAttribute(':as'),
-            index: tpl.getAttribute(':index')
+            item: tpl.getAttribute(':as')
         });
     };
 
@@ -264,8 +275,6 @@ function KSS(object, root_element) {
                 const item = iterator[i];
                 const el = foreach_obj.elem.content.children[0].cloneNode(true);
                 el.context_alias = foreach_obj.item;
-                el.context_index = foreach_obj.index;
-                el.context_index_value = i;
                 el.setAttribute('foreach_row', loopvar);
                 foreach_obj.elem.parentNode.lastElementChild.after(el);
                 refresh(el, iterator_key+'.'+i);
@@ -292,6 +301,7 @@ function KSS(object, root_element) {
                 if_obj.elem.nextElementSibling.getAttribute(':if') != if_obj.value) {
                 const el = if_obj.elem.content.children[0].cloneNode(true);
                 el.setAttribute(':if', if_obj.value);
+                el.context_alias = if_obj.parent.context_alias;
                 if_obj.elem.after(el);
                 refresh(el, if_obj.context);
             }
@@ -315,9 +325,7 @@ function KSS(object, root_element) {
             const value = kss_eval(
                 attr_obj.expr,
                 attr_obj.context,
-                attr_obj.parent.context_alias,
-                attr_obj.parent.context_index,
-                attr_obj.elem.context_index_value
+                attr_obj.parent.context_alias
             );
             attr_obj.elem.setAttribute(attr_obj.attr, value);
         }
@@ -327,9 +335,7 @@ function KSS(object, root_element) {
         text_obj.elem.innerHTML = kss_eval(
             text_obj.expr,
             text_obj.context,
-            text_obj.parent.context_alias,
-            text_obj.parent.context_index,
-            text_obj.elem.context_index_value
+            text_obj.parent.context_alias
         );
     };
 
@@ -349,10 +355,15 @@ function KSS(object, root_element) {
     };
     
     const process = function(elem, context) {
+        get_text_nodes(elem).forEach(n => {
+            const t = document.createElement('text');
+            t.setAttribute(':content', n.textContent);
+            n.replaceWith(t);
+        });
         get_foreachs(elem).forEach(fe => process_foreach(fe, elem, context));
         get_ifs(elem).forEach(i => process_if(i, elem, context));
         get_attributes(elem).forEach(a => process_attr(a, elem, context));
-        get_texts(elem).forEach(n => process_text(n, elem, context));
+        get_texts(elem).forEach(t => process_text(t, elem, context));
     };
     
     const render_by_elem = function(elem) {
@@ -369,8 +380,6 @@ function KSS(object, root_element) {
                     o => o.type == obj.type && o.elem == obj.elem && o.expr == obj.expr)
                 ) return;
                 
-                obj.elem.context_index_value = elem.context_index_value;
-
                 if (obj.type == 'foreach') render_foreach(obj);
                 if (obj.type == 'if') render_if(obj);
                 if (obj.type == 'attr') render_attr(obj);

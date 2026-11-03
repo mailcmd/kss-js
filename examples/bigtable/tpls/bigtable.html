@@ -1,23 +1,52 @@
 <template kss-tpl-id="table">
   <style>
+    .cell {
+      display: inline-block;
+      width: 40px;
+      aspect-ratio: 1;
+      text-align: center;
+      border: 2px solid black;
+      margin: 2px;
+      line-height: 2.5;
+      border-radius: 8px;
+      corner-shape: scoop;
+      padding: 3px;
+      outline-offset: 1px;
+    }
     .filled {
-      background-color: firebrick;
-      color: white;
+      animation-name: paint;
+      animation-duration: 0.3s;
+      animation-fill-mode: none;
+    }
+    
+    @keyframes paint {
+      0% {      
+      }
+      100% {
+        background-color: firebrick;
+        color: white;
+      }
     }
   </style>
   <button onclick="[$$change()]">CHANGE</button><br>
-  <table border="1">
-    <tr :foreach="$$table" :as="row" :index="ridx">
-      <td align="center" style="width: 32px;" class="{$$col.c}" :foreach="$$row" :as="col" :index="cidx">
-        <text :content="{$$col.v} - {$$<ownIndex}"></text>
-      </td>
-    </tr>
-  </table>
+  {$$table.0.0.v}
+  <div :foreach="$$table" :as="row">
+    <div :foreach="$$row" :as="col" class="cell {$$col.c}">
+      {$$col.v} - {$$ownIndex}
+    </div>
+  </div>
   <!--<br/>-->
-  <!--<ul :foreach="$$uls" :as="ul" :index="uix">-->
-  <!--  <text :content="UL IDX: {$$ownIndex} ->  {$$uix}"></text>-->
-  <!--  <li :foreach="$$ul" :as="li" :index="ix">-->
-  <!--    <text :content="{$$ix} -> {$$li} -> {$$ownIndex} -> {$$<ownIndex}"></text>-->
+  <!--<ul :foreach="$$uls" :as="ul">-->
+  <!--  <text :content="UL IDX: {$$ownIndex} ->  {$$ownIndex}"></text>-->
+  <!--  <li :foreach="$$ul" :as="li">-->
+  <!--    <span :if="$$ownIndex % 2 == 0" :else-ref="odd">-->
+  <!--      <text-->
+  <!--          :content="{$$li} -> {$$ownIndex} -> {$$<ownIndex}"></text>-->
+  <!--    </span>-->
+  <!--    <span :else="odd">-->
+  <!--      <text-->
+  <!--          :content="{$$li}"></text>-->
+  <!--    </span>-->
   <!--  </li>-->
   <!--</ul>-->
 </template>

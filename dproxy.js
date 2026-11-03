@@ -155,7 +155,7 @@ function DProxy(obj, callback) {
             _this.fullKey = '';
 
             // default action
-            if (obj[key] == undefined) return undefined;
+            if (obj[key] === undefined) return undefined;
             if (typeof(obj[key]) == 'function') return obj[key];
             
             const value = obj[key];
@@ -163,8 +163,6 @@ function DProxy(obj, callback) {
             const Constructor = eval(type.capitalize());
             const tmp_obj = new Constructor(obj[key]);
             return Object.defineProperty(tmp_obj, 'ownIndex', {value: key, enumerable: false});
-            
-            // return obj[key];
         },
         set(obj, key, val) {
             if (typeof val == 'object') {

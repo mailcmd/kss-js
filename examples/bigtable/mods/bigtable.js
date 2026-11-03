@@ -1,4 +1,4 @@
-const ROWS = 3, COLS = 6;
+const ROWS = 12, COLS = 28;
 
 sandbox.datas = {
     table: [...Array(ROWS).keys()].map( r =>
@@ -15,6 +15,9 @@ sandbox.datas = {
         const r = Math.trunc(Math.random()*ROWS);
         const c = Math.trunc(Math.random()*COLS);
         this.table[r][c] = {c: 'filled', v: +(Math.random()*9).toFixed(0)};
+        setTimeout(()=>{
+            this.table[r][c].c = '';
+        }, 500);
         setTimeout(()=>this.change(), 500);
     }
 };
