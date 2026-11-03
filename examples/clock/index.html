@@ -13,6 +13,7 @@
       margin: 0;
       align-items: center;
       font-family: Arial;
+      background-color: slategray;
     }
       
     #clock {
@@ -20,12 +21,13 @@
       width: 300px;
       aspect-ratio: 1;
       background-color: whitesmoke;
-      border: 1px dashed black;
+      border: 1px solid black;
       border-radius: 50%;
-      outline: 1px solid black;
-      outline-offset: 2px;
+      outline: 2px solid floralwhite;
+      outline-offset: 1px;
       box-shadow: 0 0 10px black;
-      background-image: radial-gradient(#fff 66%, #000 95%);
+      background-image: radial-gradient(#fff 66%, currentColor 80%);
+      filter: invert(1);
     }
 
     #hour, #minute, #second {
