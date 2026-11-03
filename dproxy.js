@@ -1,4 +1,4 @@
-/* v: 0.1.4 */
+/* v: 0.1.5 */
 
 Object.defineProperty(String.prototype, 'capitalize', {
   value: function() {
@@ -15,6 +15,18 @@ function DProxy(obj, callback) {
     };
 
     const _set = function(fullKey, val) {
+        const arrKeys = fullKey.slice(1).split('.');
+        let [key, keys] = [arrKeys.pop(), arrKeys];
+        this.fullKey = '';
+        const obj = keys.reduce((o, k) => {
+            this.fullKey += '.'+k;
+            return o[k];
+        }, this.mainObject);
+        obj[key] = val;
+        this.callback(this.fullKey+'.'+key, val, obj);
+    };
+
+    const _upd = function(fullKey, val) {
         const arrKeys = fullKey.slice(1).split('.');
         let [key, keys] = [arrKeys.pop(), arrKeys];
         const obj = keys.reduce((o, k) => {
@@ -41,14 +53,40 @@ function DProxy(obj, callback) {
         }
     };
 
-    const merge = function(obj, pobj, robj, bkey = '') {
+    const _remove = function(fullKey) {
+        const arrKeys = fullKey.split('.');
+        let [key, keys] = [arrKeys.pop(), arrKeys];
+        fullKey = keys.join('.');
+        const obj = _get.bind(this.r)(fullKey);
+        if (obj.constructor.name == 'Object') {
+            delete obj[key];
+        } else if (obj.constructor.name == 'Array') {
+            obj.remove(key);
+        }
+        this.cb(fullKey+'.'+key, '__removed__');
+    };
+    
+    const _insert = function(fullKey, value) {
+        const arrKeys = fullKey.split('.');
+        let [key, keys] = [arrKeys.pop(), arrKeys];
+        fullKey = keys.join('.');
+        const obj = _get.bind(this.r)(fullKey);
+        if (obj.constructor.name == 'Object') {
+            obj[key] = value;
+        } else if (obj.constructor.name == 'Array') {
+            obj.splice(key, 0, value);
+        }
+        this.cb(fullKey+'.'+key, '__insert__');
+    };
+    
+    const _merge = function(obj, pobj, robj, bkey = '') {
         pobj = pobj ?? this.p;
         robj = robj ?? this.r;
         for (let key in obj) {
             if (robj == this.r) pobj[key]; // force a get
             if (robj[key] === undefined) continue;
             if (typeof obj[key] == 'object') {
-                merge(obj[key], pobj[key], robj[key], bkey+'.'+key);
+                _merge(obj[key], pobj[key], robj[key], bkey+'.'+key);
             } else {
                 _this.fullKey = bkey;
                 pobj[key] = obj[key];
@@ -63,16 +101,25 @@ function DProxy(obj, callback) {
             if (obj == _this.mainObject && key == '_object') {
                 return _this.mainObject;
             }
-            // Special function set
+            // Special functions set/get/upd
             if (obj == _this.mainObject && key == 'set') {
-                return _set.bind(_this.mainProxy);
+                return _set.bind(_this);
+            }
+            if (obj == _this.mainObject && key == 'upd') {
+                return _upd.bind(_this.mainProxy);
             }
             if (obj == _this.mainObject && key == 'get') {
                 return _get.bind(_this.mainProxy);
             }
+            if (obj == _this.mainObject && key == 'rmv') {
+                return _remove.bind({cb: _this.callback, r: _this.mainObject});
+            }
+            if (obj == _this.mainObject && key == 'ins') {
+                return _insert.bind({cb: _this.callback, r: _this.mainObject});
+            }
             // Special function merge
             if (obj == _this.mainObject && key == 'merge') {
-                return merge.bind({p: _this.mainProxy, r: _this.mainObject});
+                return _merge.bind({p: _this.mainProxy, r: _this.mainObject});
             }
             // Ask if it is a Proxy, return always true
             if (key == '__isProxy') return true;
@@ -85,13 +132,22 @@ function DProxy(obj, callback) {
                 && Object.keys(obj).every(n=>is_numeric)) {
                 return Object.values(obj)[key];
             }
-
+            
+            // Special property ownIndex
             if (key == 'ownIndex') return obj[key];
 
             // it is an object so I return a Proxy
             if (typeof(obj[key]) == 'object') {
                 _this.fullKey += '.'+key;
-                Object.defineProperty(obj[key], 'ownIndex', {value: key, enumerable: false});
+                if (!obj[key].hasOwnProperty('ownIndex')) {
+                    Object.defineProperty(
+                        obj[key], 
+                        'ownIndex', 
+                        {value: key, enumerable: false, writable: true, configurable: true}
+                    );
+                } else {
+                    obj[key].ownIndex = key;
+                }
                 return new Proxy(obj[key], handler);
             }
             
@@ -112,7 +168,7 @@ function DProxy(obj, callback) {
         },
         set(obj, key, val) {
             if (typeof val == 'object') {
-                merge(val, _this.mainProxy.get(_this.fullKey+'.'+key), obj[key], _this.fullKey);
+                _merge(val, _this.mainProxy.get(_this.fullKey+'.'+key), obj[key], _this.fullKey);
             } else {
                 obj[key] = val;
                 _this.callback(_this.fullKey+'.'+key, val, obj);

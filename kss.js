@@ -128,6 +128,7 @@ function KSS(object, root_element) {
         tpl.setAttribute(':foreach', loopvar);
         elem.removeAttribute(':foreach');
         elem.removeAttribute(':as');
+        elem.removeAttribute(':index');
         tpl.innerHTML = elem.outerHTML;
         elem.before(tpl);
         elem.remove();
@@ -198,8 +199,8 @@ function KSS(object, root_element) {
         const keys = new Set();
         attr.value.matchAll(VARKEY_REGEX_RELATIVE).toArray().forEach( ([_, m]) => {
             const len = parent.context_alias?.length ?? 0;
-            const key = m.slice(0, len) != parent.context_alias 
-                ? context+'.'+m 
+            const key = m.slice(0, len) != parent.context_alias
+                ? context+'.'+m
                 : context + m.slice(len);
             keys.add(key);
         });
@@ -207,7 +208,7 @@ function KSS(object, root_element) {
             const key = '.'+m;
             keys.add(key);
         });
-
+        
         [...keys].forEach( key => {
             kss_push(_this.renderizable_objects, key, {
                 type: 'attr',
@@ -227,8 +228,8 @@ function KSS(object, root_element) {
         const keys = new Set();
         expr.matchAll(VARKEY_REGEX_RELATIVE).toArray().forEach( ([_, m]) => {
             const len = parent.context_alias?.length ?? 0;
-            const key = m.slice(0, len) != parent.context_alias 
-                ? context+'.'+m 
+            const key = m.slice(0, len) != parent.context_alias
+                ? context+'.'+m
                 : context + m.slice(len);
             keys.add(key);
         });
@@ -256,19 +257,22 @@ function KSS(object, root_element) {
             .replace(/\$\$/g, foreach_obj.context+'.')
             .replace(/\#\#/g, '.');
         const iterator = deep_proxy.get(iterator_key);
-        // try {
+        try {
+            foreach_obj.elem.parentElement.querySelectorAll('[foreach_row="'+loopvar+'"]')
+                .forEach( e => e.remove() );
             for (const i in iterator) {
                 const item = iterator[i];
                 const el = foreach_obj.elem.content.children[0].cloneNode(true);
                 el.context_alias = foreach_obj.item;
                 el.context_index = foreach_obj.index;
                 el.context_index_value = i;
+                el.setAttribute('foreach_row', loopvar);
                 foreach_obj.elem.parentNode.lastElementChild.after(el);
                 refresh(el, iterator_key+'.'+i);
             }
-        // } catch(e) {
-        //     console.warn(`KSS_ERROR: '${iterator}' key is not an iterable object`);
-        // }
+        } catch(e) {
+            console.warn(`KSS_ERROR: '${iterator}' key is not an iterable object`);
+        }
     };
     
     const render_if = function(if_obj) {
@@ -309,8 +313,8 @@ function KSS(object, root_element) {
             attr_obj.elem.setAttribute(attr_obj.attr, "KSS.run('"+attr_obj.attr+"', this)");
         } else {
             const value = kss_eval(
-                attr_obj.expr, 
-                attr_obj.context, 
+                attr_obj.expr,
+                attr_obj.context,
                 attr_obj.parent.context_alias,
                 attr_obj.parent.context_index,
                 attr_obj.elem.context_index_value
@@ -321,8 +325,8 @@ function KSS(object, root_element) {
 
     const render_text = function(text_obj) {
         text_obj.elem.innerHTML = kss_eval(
-            text_obj.expr, 
-            text_obj.context, 
+            text_obj.expr,
+            text_obj.context,
             text_obj.parent.context_alias,
             text_obj.parent.context_index,
             text_obj.elem.context_index_value
@@ -339,6 +343,11 @@ function KSS(object, root_element) {
     3- Process nodes (skip templates)
     */
     
+    const refresh = function(elem, context) {
+        process(elem, context);
+        render_by_elem(elem);
+    };
+    
     const process = function(elem, context) {
         get_foreachs(elem).forEach(fe => process_foreach(fe, elem, context));
         get_ifs(elem).forEach(i => process_if(i, elem, context));
@@ -349,19 +358,19 @@ function KSS(object, root_element) {
     const render_by_elem = function(elem) {
         const rendered_objects = [];
         for (const k in _this.renderizable_objects) {
-            _this.renderizable_objects[k].forEach( (obj,i) => {
+            _this.renderizable_objects[k].reverse().forEach( (obj,i) => {
                 if (!obj.elem.isConnected) {
                     _this.renderizable_objects[k].remove(i);
                     return;
                 }
                 if (obj.parent != elem) return;
                 
-                if (rendered_objects.some( 
-                    o => o.type == obj.type && o.elem == obj.elem && o.expr == obj.expr) 
+                if (rendered_objects.some(
+                    o => o.type == obj.type && o.elem == obj.elem && o.expr == obj.expr)
                 ) return;
-
-                obj.elem.context_index_value = elem.context_index_value;
                 
+                obj.elem.context_index_value = elem.context_index_value;
+
                 if (obj.type == 'foreach') render_foreach(obj);
                 if (obj.type == 'if') render_if(obj);
                 if (obj.type == 'attr') render_attr(obj);
@@ -371,7 +380,14 @@ function KSS(object, root_element) {
         }
     };
     
-    const render_by_key = function(key, v) {
+    const render_by_key = function(key, extra) {
+        // console.log('KSS_UPDATE: ', key, extra);
+        if (extra == '__removed__') {
+            key = key.split('.').slice(0, -1).join('.');
+        } else if (extra == '__insert__') {
+            key = key.split('.').slice(0, -1).join('.');
+        }
+
         (_this.renderizable_objects[key] ?? []).forEach( (obj,i) => {
             if (!obj.elem.isConnected) {
                 _this.renderizable_objects[key].remove(i);
@@ -382,11 +398,6 @@ function KSS(object, root_element) {
             if (obj.type == 'attr') render_attr(obj);
             if (obj.type == 'text') render_text(obj);
         });
-    };
-    
-    const refresh = function(elem, context) {
-        process(elem, context);
-        render_by_elem(elem);
     };
     
     ///////////////////////////////////////////////////////////////////////////////////////
@@ -403,8 +414,12 @@ function KSS(object, root_element) {
     const deep_proxy = new DProxy(object, render_by_key);
     this.merge = deep_proxy.merge;
     this.set = deep_proxy.set;
+    this.upd = deep_proxy.upd;
     this.get = deep_proxy.get;
+    this.rmv = deep_proxy.rmv;
+    this.ins = deep_proxy.ins;
     this.deep_proxy = deep_proxy;
+    this.render_key = render_by_key;
     this.run = kss_run;
 }
 

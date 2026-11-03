@@ -1,8 +1,8 @@
-const ROWS = 30, COLS = 60;
+const ROWS = 3, COLS = 6;
 
 sandbox.datas = {
-    table: [...Array(ROWS).keys()].map( _ =>
-        [...Array(COLS).keys().map(_=>[{c: '', v: 0}][0])]
+    table: [...Array(ROWS).keys()].map( r =>
+        [...Array(COLS).keys().map(c => [{c: '', v: r}][0])]
     ),
     uls: [
         [1,2,3,4,5,6],

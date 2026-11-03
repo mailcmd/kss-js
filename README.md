@@ -47,3 +47,5 @@ Someday...
 - [x] Make a way to create sandbox as small modules and integrate them in one APP.
 - [ ] Check nested structures.
 - [ ] Maybe add text nodes?
+- [ ] Improve elements index and search strategy.
+- [x] Resolve remove and insert into arrays and iterable objects.
