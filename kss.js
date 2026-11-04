@@ -23,27 +23,6 @@ function KSS(object, root_element) {
         return elem.querySelectorAll(':not(template) [\\:if]:not(template)');
     };
     
-    const get_texts = function(elem) {
-        return elem.querySelectorAll(':not(template) text');
-    };
-    
-    const get_text_nodes = function(elem) {
-        const cid = elem.getAttribute('cord-id');
-        const children = [];
-        const walker = document.createTreeWalker(elem, NodeFilter.SHOW_TEXT);
-        while(walker.nextNode()) {
-            const node = walker.currentNode;
-            if (node.textContent.trim().length == 0)
-                continue;
-            if (!node.textContent.match(/\{(.+?)\}/g)) 
-                continue;
-            if (node.parentElement.tagName == 'STYLE')
-                continue;
-            children.push(node);
-        }
-        return children;
-    };
-    
     const get_attributes = function(elem) {
         return [elem, ...elem.querySelectorAll(':not(template) *')].map( el => {
             return Object.values(el.attributes)
@@ -57,6 +36,32 @@ function KSS(object, root_element) {
         }).flat();
     };
     
+    const get_texts = function(elem) {
+        return elem.querySelectorAll(':not(template) text');
+    };
+    
+    const get_text_nodes = function(elem) {
+        const cid = elem.getAttribute('cord-id');
+        const children = [];
+        const walker = document.createTreeWalker(elem, NodeFilter.SHOW_TEXT);
+        while(walker.nextNode()) {
+            const node = walker.currentNode;
+            if (node.textContent.trim().length == 0)
+                continue;
+            if (!node.textContent.match(/\{(.+?)\}/g))
+                continue;
+            if (node.parentElement.tagName == 'STYLE')
+                continue;
+            children.push(node);
+        }
+        return children;
+    };
+
+    const get_bounds = function(elem) {
+        return elem.querySelectorAll(':not(template) [\\:bind]');
+    };
+    
+    
     ////////////////////////////////////////////////////////////////////////////////////////
     // Tools
     ////////////////////////////////////////////////////////////////////////////////////////
@@ -64,7 +69,9 @@ function KSS(object, root_element) {
 
     const kss_push = function(object, key, item) {
         object[key] = object[key] ?? [];
-        object[key].push(item);
+        if (
+            !object[key].some( o => o.type == item.type && o.elem == item.elem && o.expr == item.expr)
+        ) object[key].push(item);
     };
     
     /*
@@ -86,19 +93,19 @@ function KSS(object, root_element) {
             exp = exp
                 .replaceAll(VARKEY_REGEX_RELATIVE, (_1, m) => {
                     const value = deep_proxy.get(context+'.'+m);
-                    if (typeof value == 'string') {
-                        return "'"+value+"'";
+                    if (typeof value.valueOf() == 'string') {
+                        return "'"+value.valueOf()+"'";
                     } else {
-                        return value;
+                        return value.valueOf();
                    }
                 })
                 .replaceAll(VARKEY_REGEX_ABSOLUTE, (_1, m) => {
                     const value = deep_proxy.get('.'+m);
-                    if (typeof value == 'string') {
-                        return "'"+value+"'";
+                    if (typeof value.valueOf() == 'string') {
+                        return "'"+value.valueOf()+"'";
                     } else {
-                        return value;
-                   }
+                        return value.valueOf();
+                  }
                 });
             try {
                 exp = exp == '' ? exp : eval(exp);
@@ -259,6 +266,31 @@ function KSS(object, root_element) {
         });
     };
     
+    const process_bind = function(elem, parent, context) {
+        let expr = elem.getAttribute(':bind');
+        const keys = new Set();
+        expr.matchAll(VARKEY_REGEX_RELATIVE).toArray().forEach( ([_, m]) => {
+            const len = parent.context_alias?.length ?? 0;
+            const key = m.slice(0, len) != parent.context_alias
+                ? context+'.'+m
+                : context + m.slice(len);
+            keys.add(key);
+        });
+        expr.matchAll(VARKEY_REGEX_ABSOLUTE).toArray().forEach( ([_, m]) => {
+            const key = '.'+m;
+            keys.add(key);
+        });
+        [...keys].forEach( key => {
+            kss_push(_this.renderizable_objects, key, {
+                type: 'bind',
+                elem: elem,
+                parent: parent,
+                context: context,
+                expr: expr
+            });
+        });
+    };
+    
     ////////////////////////////////////////////////////////////////////////////////////////
     // renderers
     ////////////////////////////////////////////////////////////////////////////////////////
@@ -276,6 +308,7 @@ function KSS(object, root_element) {
                 const el = foreach_obj.elem.content.children[0].cloneNode(true);
                 el.context_alias = foreach_obj.item;
                 el.setAttribute('foreach_row', loopvar);
+                el.setAttribute('foreach_row_index', i);
                 foreach_obj.elem.parentNode.lastElementChild.after(el);
                 refresh(el, iterator_key+'.'+i);
             }
@@ -295,7 +328,6 @@ function KSS(object, root_element) {
             );
             return;
         }
-    //console.log(if_obj, result)
         if (result) {
             if (!if_obj.elem.nextElementSibling ||
                 if_obj.elem.nextElementSibling.getAttribute(':if') != if_obj.value) {
@@ -338,6 +370,23 @@ function KSS(object, root_element) {
         );
     };
 
+    const render_bind = function(bind_obj) {
+        if (!bind_obj.elem.oninput) {
+            const key = bind_obj.expr
+                .replace('$$', '.'+bind_obj.context)
+                .replace('##', '.');
+            bind_obj.elem.oninput = bind_obj.elem.onchange = function() {
+                _this.set(key, bind_obj.elem.value);
+                return true;
+            };
+        }
+        bind_obj.elem.value = kss_eval(
+            '{'+bind_obj.expr.trim()+'}',
+            bind_obj.context,
+            bind_obj.parent.context_alias
+        );
+    };
+
     ////////////////////////////////////////////////////////////////////////////////////////
     // Main processes
     ////////////////////////////////////////////////////////////////////////////////////////
@@ -363,18 +412,19 @@ function KSS(object, root_element) {
         get_ifs(elem).forEach(i => process_if(i, elem, context));
         get_attributes(elem).forEach(a => process_attr(a, elem, context));
         get_texts(elem).forEach(t => process_text(t, elem, context));
+        get_bounds(elem).forEach(b => process_bind(b, elem, context));
     };
     
     const render_by_elem = function(elem = null, key = null) {
         const rendered_objects = [];
         const removables = [];
-        const renderizable_objects = key 
+        const renderizable_objects = key
             ? {[key]: _this.renderizable_objects[key]}
             : _this.renderizable_objects;
         for (const k in renderizable_objects) {
-            _this.renderizable_objects[k].reverse().forEach( (obj,i) => {
+            (_this.renderizable_objects[k]??[]).reverse().forEach( (obj,i) => {
                 if (!obj.elem.isConnected) {
-                    _this.renderizable_objects[k].remove(i)
+                    _this.renderizable_objects[k].remove(i);
                     return;
                 }
                 if (elem && obj.parent != elem) return;
@@ -387,19 +437,23 @@ function KSS(object, root_element) {
                 if (obj.type == 'if') render_if(obj);
                 if (obj.type == 'attr') render_attr(obj);
                 if (obj.type == 'text') render_text(obj);
+                if (obj.type == 'bind') render_bind(obj);
                 rendered_objects.push(obj);
             });
         }
     };
     
     const render_by_key = function(key, extra) {
-        // console.log('KSS_UPDATE: ', key, extra);
         if (extra == '__removed__') {
             key = key.split('.').slice(0, -1).join('.');
         } else if (extra == '__insert__') {
             key = key.split('.').slice(0, -1).join('.');
+        } else if (extra == '__push__') {
+            key = key.split('.').slice(0, -1).join('.');
         }
-        render_by_elem(null, key);
+        // console.log('KSS_UPDATE', key, _this.get(key));
+        if (_this.renderizable_objects[key])
+            render_by_elem(null, key);
     };
     
     ///////////////////////////////////////////////////////////////////////////////////////

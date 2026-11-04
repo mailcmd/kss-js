@@ -1,0 +1,17 @@
+<template kss-tpl-id="list">
+  <style>
+  .task > div {
+    display: inline-block;
+    width: 12rem;
+  }
+  </style>
+  <input :bind="$$text"/><button onclick="[$$list_add()]">ADD TASK</button><br>
+  <br/>
+  <ul>
+    <li :foreach="$$tasks" :as="task" class="task">
+      <div>{$$ownIndex}: {$$task.description}</div>
+      <button onclick="[##list_del($$ownIndex)]">x</button>
+    </li>
+  </ul>
+</template>
+    

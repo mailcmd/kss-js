@@ -66,7 +66,7 @@ function DProxy(obj, callback) {
         this.cb(fullKey+'.'+key, '__removed__');
     };
     
-    const _insert = function(fullKey, value) {
+    const _insert = function(fullKey, value, is_push = false) {
         const arrKeys = fullKey.split('.');
         let [key, keys] = [arrKeys.pop(), arrKeys];
         fullKey = keys.join('.');
@@ -76,7 +76,13 @@ function DProxy(obj, callback) {
         } else if (obj.constructor.name == 'Array') {
             obj.splice(key, 0, value);
         }
-        this.cb(fullKey+'.'+key, '__insert__');
+        this.cb(fullKey+'.'+key, is_push ? '__push__' : '__insert__');
+    };
+    
+    const _push = function(value) {
+        const arr = _get.bind(this.mainObject)(this.fullKey);
+        const pos = arr.length;
+        _insert.bind({cb: this.callback, r: this.mainObject})(this.fullKey+'.'+pos, value, true);
     };
     
     const _merge = function(obj, pobj, robj, bkey = '') {
@@ -127,6 +133,10 @@ function DProxy(obj, callback) {
             // clear fullKey because is the start of the chain of keys
             if (obj == _this.mainObject) _this.fullKey = '';
             
+            if (obj.constructor.name == 'Array' && key == 'push') {
+                return _push.bind(_this);
+            }
+            
             // simulate array
             if (Object.getOwnPropertyNames(Array.prototype).includes(key)
                 && Object.keys(obj).every(n=>is_numeric)) {
@@ -156,13 +166,18 @@ function DProxy(obj, callback) {
 
             // default action
             if (obj[key] === undefined) return undefined;
+            
             if (typeof(obj[key]) == 'function') return obj[key];
             
-            const value = obj[key];
-            const type = typeof(obj[key]);
-            const Constructor = eval(type.capitalize());
-            const tmp_obj = new Constructor(obj[key]);
-            return Object.defineProperty(tmp_obj, 'ownIndex', {value: key, enumerable: false});
+            if (['Array', 'Object'].includes(obj[key].constructor.name)) {
+                const value = obj[key];
+                const type = typeof(obj[key]);
+                const Constructor = eval(type.capitalize());
+                const tmp_obj = new Constructor(obj[key]);
+                return Object.defineProperty(tmp_obj, 'ownIndex', {value: key, enumerable: false});
+            } else {
+                return obj[key]
+            }
         },
         set(obj, key, val) {
             if (typeof val == 'object') {
