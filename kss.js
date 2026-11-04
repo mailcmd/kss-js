@@ -295,7 +295,7 @@ function KSS(object, root_element) {
             );
             return;
         }
-        
+    //console.log(if_obj, result)
         if (result) {
             if (!if_obj.elem.nextElementSibling ||
                 if_obj.elem.nextElementSibling.getAttribute(':if') != if_obj.value) {
@@ -306,8 +306,7 @@ function KSS(object, root_element) {
                 refresh(el, if_obj.context);
             }
         } else {
-            if (if_obj.elem.nextElementSibling &&
-                if_obj.elem?.nextElementSibling.getAttribute(':if') == if_obj.value)
+            if (if_obj.elem?.nextElementSibling.getAttribute(':if') == if_obj.value)
                 if_obj.elem.nextElementSibling.remove();
         }
     };
@@ -366,15 +365,19 @@ function KSS(object, root_element) {
         get_texts(elem).forEach(t => process_text(t, elem, context));
     };
     
-    const render_by_elem = function(elem) {
+    const render_by_elem = function(elem = null, key = null) {
         const rendered_objects = [];
-        for (const k in _this.renderizable_objects) {
+        const removables = [];
+        const renderizable_objects = key 
+            ? {[key]: _this.renderizable_objects[key]}
+            : _this.renderizable_objects;
+        for (const k in renderizable_objects) {
             _this.renderizable_objects[k].reverse().forEach( (obj,i) => {
                 if (!obj.elem.isConnected) {
-                    _this.renderizable_objects[k].remove(i);
+                    _this.renderizable_objects[k].remove(i)
                     return;
                 }
-                if (obj.parent != elem) return;
+                if (elem && obj.parent != elem) return;
                 
                 if (rendered_objects.some(
                     o => o.type == obj.type && o.elem == obj.elem && o.expr == obj.expr)
@@ -396,17 +399,7 @@ function KSS(object, root_element) {
         } else if (extra == '__insert__') {
             key = key.split('.').slice(0, -1).join('.');
         }
-
-        (_this.renderizable_objects[key] ?? []).forEach( (obj,i) => {
-            if (!obj.elem.isConnected) {
-                _this.renderizable_objects[key].remove(i);
-                return;
-            }
-            if (obj.type == 'foreach') render_foreach(obj);
-            if (obj.type == 'if') render_if(obj);
-            if (obj.type == 'attr') render_attr(obj);
-            if (obj.type == 'text') render_text(obj);
-        });
+        render_by_elem(null, key);
     };
     
     ///////////////////////////////////////////////////////////////////////////////////////

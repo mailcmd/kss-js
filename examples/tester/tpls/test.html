@@ -1,8 +1,8 @@
 <template kss-tpl-id="test">
   <text :content="$$text + '5'"></text> capo
   <table border="2">
-    <tr :foreach="$$form">
-      <td><text :content="$$item.name"></text></td>
+    <tr :foreach="$$form" :as="item">
+      <td><text :content="$$item.key"></text></td>
       <td><text :content="$$item.value * ##value"></text></td>
     </tr>
   </table>
@@ -12,9 +12,9 @@
     SUM
   </button>
   <div :if="$$value % 2 == 0" :else-ref="value_mod">
-    <text :content="$$value"></text> is par
+    {$$value} is par
   </div>
   <div :else="value_mod">
-    <text :content="$$value"></text> is impar
+    {$$value} is impar
   </div>
 </template>

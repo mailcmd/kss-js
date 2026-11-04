@@ -1,7 +1,7 @@
 
 // Event fired after KSS.init
 window.addEventListener('kssready', function(e){
-    console.log('rfsready event triggered!', e);
+    console.log('kssready event triggered!', e);
 });
 
 // Main process

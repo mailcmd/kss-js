@@ -6,8 +6,8 @@ sandbox.datas = {
         },
         label: 'etiqueta',
         form: {
-            a: {name: 'pass', value: '20'},
-            b: {name: 'name', value: '10'},
+            a: {key: 'key1', value: '20'},
+            b: {key: 'key2', value: '10'},
         }
 };
 sandbox.tpl_id = 'test';
