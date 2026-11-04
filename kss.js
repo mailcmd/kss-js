@@ -41,7 +41,6 @@ function KSS(object, root_element) {
     };
     
     const get_text_nodes = function(elem) {
-        const cid = elem.getAttribute('cord-id');
         const children = [];
         const walker = document.createTreeWalker(elem, NodeFilter.SHOW_TEXT);
         while(walker.nextNode()) {
