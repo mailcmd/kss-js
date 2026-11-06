@@ -532,8 +532,13 @@ KSS.include = async function(module) {
         const mod = eval(js);
         // if we need to load templates before, we do it
         const preload_tpls = mod.preload_tpls ?? [];
-        for (const tpl of preload_tpls) {
-            await KSS.loadtpl(tpl);
+        for (let tpl of preload_tpls) {
+            if ((/\//).test(tpl)) {
+                await KSS.loadtpl(tpl);
+            } else {
+                tpl = module.split('/').slice(0, -1).join('/') + '/' + tpl;    
+                await KSS.loadtpl(tpl);
+            }
         }
         // Now we can add the sandbox
         KSS.add_sandbox(mod.name, mod.datas, {
@@ -601,4 +606,119 @@ KSS.init = function() {
     Object.values(KSS.sandboxes).forEach( c => c.sb.init() );
     const kssReadyEvent = new CustomEvent('kssready', { detail: { ksssandboxes: KSS.sandboxes } });
     window.dispatchEvent(kssReadyEvent);
+};
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+// Statics for websocket 
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+KSS.connection = null;
+
+KSS.connect = function(config) {
+    /////////////////////////////////////////////////////////////////////////////////
+    // Internals 
+    /////////////////////////////////////////////////////////////////////////////////
+    const onerror = function(error) {
+        console.error('KSS Websocket error!', error);
+        if (conn.config.reconnect !== false) check_status();
+    };
+
+    const onclose = function(msg) {
+        console.warn('KSS Websocket closed!');
+        const kssWSCloseEvent = new CustomEvent('ksswebsocketclosed',
+                                                 { detail: { kssConnection: conn } });
+        window.dispatchEvent(kssWSCloseEvent);
+        if (conn.config.reconnect !== false) check_status();
+    };
+
+    const check_status = function() {
+        if (conn.socket.readyState == WebSocket.CLOSED
+            || conn.socket.readyState === 0) {
+            console.warn('KSS Websocket not connected!');
+            if (conn.config.reconnect !== false)
+                setTimeout(connect, conn.config.reconnect_delay ?? 1000);
+            return false;
+        } else if (conn.socket.readyState == WebSocket.CONNECTING) {
+            console.log('KSS EventSource: connecting...');
+            return false;
+        }
+        clearTimeout(to);
+        console.log('KSS Websocket: connected!');
+        const kssWSReadyEvent = new CustomEvent('ksswebsocketready',
+                                                 { detail: { kssConnection: conn} });
+        window.dispatchEvent(kssWSReadyEvent);
+        conn.socket.onerror = onerror;
+        conn.socket.onmessage = onmessage;
+        conn.socket.onclose = onclose;
+        return true;
+    };
+    
+    const send = function(message, callback = function(){}) {
+        if (message.msg_id) {
+            conn.callbacks[message.msg_id] = callback;
+        }
+        message = typeof message != 'string' ? JSON.stringify(message) : message;
+        conn.socket.send(message);
+    };
+    
+    const close = function() {
+        conn.socket.close();
+    };
+    
+    const connect = function() {
+        if (conn.socket) close();
+        console.log('KSS Websocket: connecting...');
+        conn.socket = new WebSocket(config.url);
+        to = setTimeout(check_status, 1000);
+    };
+    
+    const onmessage = function({data, timeStamp}) {
+        console.log('KSS_WS_MSG:', data);
+        let msg;
+        try {
+            msg = JSON.parse(data);
+        } catch(e) {
+            msg = data;
+        }        
+        // normalize msg
+        if (typeof msg != 'object')
+            msg = {action: 'unknown', data: msg}
+
+        // if msg has msg_id look for callback
+        if (msg.msg_id && conn.callbacks && conn.callbacks[msg.msg_id]) {
+            conn.callbacks[msg.msg_id](msg);
+            return;
+        }
+        msg.action = msg.action ? msg.action : 'unknown';
+        
+        if (msg.action == 'upd') {
+            KSS.getSandbox(msg.sandbox).upd(msg.key, msg.data);
+        } else if (msg.action == 'merge') {
+            KSS.getSandbox(msg.sandbox).merge(msg.data);
+        } else if (msg.action == 'set') {
+            KSS.getSandbox(msg.sandbox).set(msg.key, msg.data);
+        } else if (msg.action == 'rmv') {
+            KSS.getSandbox(msg.sandbox).rmv(msg.key);
+        } else if (msg.action == 'ins') {
+            KSS.getSandbox(msg.sandbox).ins(msg.key, msg.data);
+        } 
+    };
+    
+    /////////////////////////////////////////////////////////////////////////////////
+    // Init
+    /////////////////////////////////////////////////////////////////////////////////
+    let to;
+    
+    const conn = {
+        config: config,
+        callbacks: {}
+    };
+    
+    connect();
+    
+    KSS.send = send;
+    KSS.disconnect = close;
+    KSS.connection = conn;
+    return conn;
 };

@@ -1,0 +1,12 @@
+<template kss-tpl-id="websocket">
+  <b>TIME:</b>: {$$time}<br/><br/>
+  <b>PERSON</b>: {$$person.lastname}, {$$person.firstname}<br/>
+  <b>SOME TEXT</b>: {$$text}<br/>
+  <b>SOME VALUE</b>: {$$value}<br/>
+  
+  <ul>
+    <li :foreach="$$list" :as="n">
+      {$$n}
+    </li>
+  </ul>
+</template>
