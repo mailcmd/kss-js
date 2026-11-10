@@ -19,15 +19,15 @@ function KSS(object, root_element) {
     // GETs
     ////////////////////////////////////////////////////////////////////////////////////////
     const get_foreachs = function(elem) {
-        return elem.querySelectorAll(':not(template) [\\:foreach]:not(template)');
+        return elem.querySelectorAll(':scope [\\:foreach]:not(template):not(template):not(kss-sandbox):not(:scope kss-sandbox *)');
     };
     
     const get_ifs = function(elem) {
-        return elem.querySelectorAll(':not(template) [\\:if]:not(template)');
+        return elem.querySelectorAll(':scope [\\:if]:not(template):not(template):not(kss-sandbox):not(:scope kss-sandbox *)');
     };
     
     const get_attributes = function(elem) {
-        return [elem, ...elem.querySelectorAll(':not(template) *')].map( el => {
+        return [elem, ...elem.querySelectorAll(':scope *:not(template):not(kss-sandbox):not(:scope kss-sandbox *)')].map( el => {
             return Object.values(el.attributes)
                 .filter(a => {
                     return (
@@ -40,7 +40,7 @@ function KSS(object, root_element) {
     };
     
     const get_texts = function(elem) {
-        return elem.querySelectorAll(':not(template) text');
+        return elem.querySelectorAll(':scope text:not(:scope kss-sandbox *)');
     };
     
     const get_text_nodes = function(elem) {
@@ -516,11 +516,20 @@ function KSS(object, root_element) {
     };
     
     ///////////////////////////////////////////////////////////////////////////////////////
-    this.init = function() {
-        refresh(this.sandboxed_element, '');
-        if (this.sandboxed_element.oninit) {
-            this.sandboxed_element.oninit.bind(this.deep_proxy)();
+    this.init = function(force = false) {
+        if (!this.sandboxed_element.isConnected) return;
+        if (!this.initialized || force) {
+            refresh(this.sandboxed_element, '');
+            if (this.sandboxed_element.oninit) {
+                this.sandboxed_element.oninit.bind(this.deep_proxy)();
+            }
+            this.initialized = true;
         }
+    };
+    
+    this.append_to = function(el) {
+        el.append(this.sandboxed_element);
+        this.init(true);
     };
 
     this.sandboxed_element = root_element;
@@ -537,6 +546,7 @@ function KSS(object, root_element) {
     this.render_key = render_by_key;
     this.render_elem = render_by_elem;
     this.run = kss_run;
+    this.initialized = false;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -581,14 +591,15 @@ KSS.loadtpl = async function(template, name = undefined) {
     return true;
 };
 
-KSS.include = async function(module) {
+KSS.include = async function(module, config = {}) {
+    if (module.slice(-3) != '.js') module += '.js';
     try {
         const js = `
-        (function(){
+        (function(config){
         const sandbox = {};
         ${await KSS.fetch(module)}
         return sandbox;
-        })();
+        })(config);
         `;
         const mod = eval(js);
         // if we need to load templates before, we do it
@@ -613,6 +624,8 @@ KSS.include = async function(module) {
     }
 };
 
+KSS.loadmod = KSS.include;
+
 KSS.add_sandbox = function(name, data_object, elem) {
     let root_elem;
     if (typeof(elem) == 'string') {
@@ -626,20 +639,20 @@ KSS.add_sandbox = function(name, data_object, elem) {
         root_elem = document.createElement('kss-sandbox');
         root_elem.setAttribute('kss-id', name);
         root_elem.append(tpl.cloneNode(true).content);
-        elem.target.append(root_elem);
+        if (elem.target) elem.target.append(root_elem);
     } else if (elem?.html) {
         root_elem = document.createElement('kss-sandbox');
         root_elem.setAttribute('kss-id', name);
         root_elem.innerHTML = elem.html;
-        elem.target.append(root_elem);
+        if (elem.target) elem.target.append(root_elem);
     } else {
         root_elem = elem;
     }
 
-    if (!root_elem.isConnected || !root_elem?.querySelectorAll) {
-        console.warn(`KSS_ERROR: Sandbox '${name}': '${elem}' is not a reference to a valid DOM element!`, elem);
-        return;
-    }
+    // if (!root_elem.isConnected || !root_elem?.querySelectorAll) {
+    //     console.warn(`KSS_ERROR: Sandbox '${name}': '${elem}' is not a reference to a valid DOM element!`, elem);
+    //     return;
+    // }
     root_elem.oninit = elem.oninit;
     
     KSS.sandboxes[name] = {
@@ -648,6 +661,7 @@ KSS.add_sandbox = function(name, data_object, elem) {
         data_object: data_object,
         elem: root_elem
     };
+    KSS.sandboxes[name].sb.init();
 };
 
 KSS.run = function(attr, elem) {
@@ -660,7 +674,8 @@ KSS.get = function(name) {
 };
 
 KSS.getSandbox = function(name) {
-    return KSS.sandboxes[name].sb;
+    if (KSS.sandboxes[name]) return KSS.sandboxes[name].sb;
+    console.warn(`KSS_ERROR: Does not exists a sandbox named '${name}'!`);
 };
 
 KSS.init = function() {
@@ -669,6 +684,7 @@ KSS.init = function() {
     window.dispatchEvent(kssReadyEvent);
 };
 
+KSS.ready = KSS.init;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 // Statics for websocket 

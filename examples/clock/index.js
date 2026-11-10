@@ -6,7 +6,6 @@ window.addEventListener('kssready', function(e){
 
 // Main process
 (async function(){
-    // await KSS.loadtpl('tpls/clock.html');
-    await KSS.include('mods/clock.js');
-    KSS.init();
+    await KSS.loadmod('mods/clock');
+    KSS.ready();
 })();
