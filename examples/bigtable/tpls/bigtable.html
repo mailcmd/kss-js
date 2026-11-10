@@ -29,25 +29,10 @@
     }
   </style>
   <button onclick="[$$change()]">CHANGE</button><br>
-  {$$table.0.0.v}
   <div :foreach="$$table" :as="row">
     <div :foreach="$$row" :as="col" class="cell {$$col.c}">
       {$$col.v} - {$$ownIndex}
     </div>
   </div>
-  <!--<br/>-->
-  <!--<ul :foreach="$$uls" :as="ul">-->
-  <!--  <text :content="UL IDX: {$$ownIndex} ->  {$$ownIndex}"></text>-->
-  <!--  <li :foreach="$$ul" :as="li">-->
-  <!--    <span :if="$$ownIndex % 2 == 0" :else-ref="odd">-->
-  <!--      <text-->
-  <!--          :content="{$$li} -> {$$ownIndex} -> {$$<ownIndex}"></text>-->
-  <!--    </span>-->
-  <!--    <span :else="odd">-->
-  <!--      <text-->
-  <!--          :content="{$$li}"></text>-->
-  <!--    </span>-->
-  <!--  </li>-->
-  <!--</ul>-->
 </template>
     

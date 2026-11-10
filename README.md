@@ -8,6 +8,105 @@ As the saying goes: *“Don't use a sledgehammer to kill a fly.”*
 ## DOC
 Someday...
 
+## Example
+
+**index.html**
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>KSS WebSocket</title>
+</head>
+
+<body>
+  <div id="main"></div>
+
+  <!-- load="bundle" force load of dproxy lib before go ahead -->
+  <script src="kss.js" load="bundle"></script>
+  <script src="index.js"></script>
+</body>
+```
+
+**index.js**
+```javascript
+// Event fired after KSS.init
+window.addEventListener('kssready', function(e){
+    console.log('rfsready event triggered!', e);
+});
+
+// Main process
+(async function(){
+    await KSS.loadtpl('tpls/bigtable.html');
+    await KSS.include('mods/bigtable.js');
+    KSS.init();
+})();
+```
+
+**tpls/bigtable.html**
+```html
+<template kss-tpl-id="table">
+  <style>
+    .cell {
+      display: inline-block;
+      width: 40px;
+      aspect-ratio: 1;
+      text-align: center;
+      border: 2px solid black;
+      margin: 2px;
+      line-height: 2.5;
+      border-radius: 8px;
+      corner-shape: scoop;
+      padding: 3px;
+      outline-offset: 1px;
+    }
+    .filled {
+      animation-name: paint;
+      animation-duration: 0.3s;
+      animation-fill-mode: none;
+    }
+
+    @keyframes paint {
+      0% {
+      }
+      100% {
+        background-color: firebrick;
+        color: white;
+      }
+    }
+  </style>
+  <button onclick="[$$change()]">CHANGE</button><br>
+  <div :foreach="$$table" :as="row">
+    <div :foreach="$$row" :as="col" class="cell {$$col.c}">
+      {$$col.v} - {$$ownIndex}
+    </div>
+  </div>
+</template>
+```
+
+**mods/bigtable.js**
+```javascript
+const ROWS = 12, COLS = 28;
+
+sandbox.datas = {
+    table: [...Array(ROWS).keys()].map( r =>
+        [...Array(COLS).keys().map(c => [{c: '', v: r}][0])]
+    ),
+    change: function() {
+        const r = Math.trunc(Math.random()*ROWS);
+        const c = Math.trunc(Math.random()*COLS);
+        this.table[r][c] = {c: 'filled', v: +(Math.random()*9).toFixed(0)};
+        setTimeout(()=>{
+            this.table[r][c].c = '';
+        }, 500);
+        setTimeout(()=>this.change(), 500);
+    }
+};
+sandbox.tpl_id = 'table';
+sandbox.name = 'main';
+sandbox.target = document.querySelector('#main');
+```
+
 ---- o -----
 
 ## My notes for future doc

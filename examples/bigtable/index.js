@@ -1,4 +1,6 @@
 
+//console.log(document.currentScript.getAttribute('load'));
+
 // Event fired after KSS.init
 window.addEventListener('kssready', function(e){
     console.log('rfsready event triggered!', e);
