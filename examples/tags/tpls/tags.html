@@ -1,0 +1,43 @@
+<template kss-tpl-id="tags">
+<style>
+  [kss-id="tags"] input {
+    border-width: 0;
+    outline: none;
+  }
+  .box {
+    border: 1px solid gray;
+    padding: 4px;
+  }
+  .tag {
+    padding: 3px;
+    border: 1px solid red;
+    border-radius: 3px;
+    margin-right: 3px;
+  }
+  
+  [suggest] {
+    position: relative;
+  }
+  
+  [suggest]::before {
+    content: attr(suggest);
+    position: absolute;
+    top: 4px;
+    left: 3px;
+    color: #7777;
+    font-family: arial;
+    font-size: 85%;
+  }
+</style>
+
+<div class="box">
+  <span>
+    <span class="tag" :foreach="$$tags" :as="item">{$$item}</span>
+  </span>
+  
+  <span suggest="{$$suggest}">
+    <input type="text" :bind="$$tag" onkeyup="[$$add()]" onkeydown="[$$ctrl()]"/>
+  </span>
+</div>
+
+</template>

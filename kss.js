@@ -529,7 +529,7 @@ function KSS(object, root_element) {
             value = _this.rget(key);
             key = keys.join('.') + '.*';
         }
-        console.log('KSS_UPDATE', key, value, _this.rget(key));
+        //console.log('KSS_UPDATE', key, value, _this.rget(key));
         
         if (_this.renderizable_objects[key])
             render_by_elem(null, key, index);
