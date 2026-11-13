@@ -8,6 +8,7 @@ sandbox.datas = {
         },
         time: ''
 };
+sandbox.preload_tpls = ['tpls/ws.html'];
 sandbox.tpl_id = 'websocket';
 sandbox.name = 'main';
 sandbox.target = document.querySelector('#main');
