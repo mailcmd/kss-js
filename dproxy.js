@@ -73,17 +73,28 @@ function DProxy(obj, callback) {
         let [key, keys] = [arrKeys.pop(), arrKeys];
         fullKey = keys.join('.');
         const obj = _get.bind(this.r)(fullKey);
+        let is_update = false;
         if (obj.constructor.name == 'Object') {
+            is_update = obj[key] != undefined;
             obj[key] = value;
         } else if (obj.constructor.name == 'Array') {
             obj.splice(key, 0, value);
         }
-        this.cb(fullKey+'.'+key, is_push ? '__push__' : '__insert__');
+        let operation = '__insert__';
+        if (is_update) {
+            operation = '__update__';
+        } else if (is_push) {
+            operation = '__push__';
+        }
+        this.cb(fullKey+'.'+key, operation);
     };
     
-    const _push = function(value) {
+    // key is used when the target is an object (not an array)
+    const _push = function(value, key = null) {
         const arr = _get.bind(this.mainObject)(this.fullKey);
-        const pos = arr.length;
+        const pos = arr.constructor.name == 'Object' && key != null
+            ? key
+            : Object.values(arr).length;
         _insert.bind({cb: this.callback, r: this.mainObject})(this.fullKey+'.'+pos, value, true);
     };
     
@@ -123,6 +134,9 @@ function DProxy(obj, callback) {
             if (obj == _this.mainObject && key == 'get') {
                 return _get.bind(_this.mainProxy);
             }
+            if (obj == _this.mainObject && key == 'rget') {
+                return _get.bind(_this.mainObject);
+            }
             if (obj == _this.mainObject && key == 'rmv') {
                 return _remove.bind({cb: _this.callback, r: _this.mainObject});
             }
@@ -140,6 +154,9 @@ function DProxy(obj, callback) {
             if (obj == _this.mainObject) _this.fullKey = '';
             
             if (obj.constructor.name == 'Array' && key == 'push') {
+                return _push.bind(_this);
+            }
+            if (obj.constructor.name == 'Object' && key == 'push') {
                 return _push.bind(_this);
             }
             
@@ -193,6 +210,7 @@ function DProxy(obj, callback) {
                 obj[key] = val;
                 _this.callback(_this.fullKey+'.'+key, val, obj);
             }
+            return true;
         }
     };
     

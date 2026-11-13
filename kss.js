@@ -155,22 +155,17 @@ function KSS(object, root_element) {
         tpl.innerHTML = elem.outerHTML;
         elem.before(tpl);
         elem.remove();
-        kss_push(_this.renderizable_objects, loopvar, {
+        const foreach_obj = {
             type: 'foreach',
             elem: tpl,
             parent: parent,
             context: context,
-            item: tpl.getAttribute(':as')
-        });
-        if (force_key) {
-            kss_push(_this.renderizable_objects, force_key, {
-                type: 'foreach',
-                elem: tpl,
-                parent: parent,
-                context: context,
-                item: tpl.getAttribute(':as')
-            });
-        }
+            item: tpl.getAttribute(':as'),
+            index: -1
+        };
+        kss_push(_this.renderizable_objects, loopvar, foreach_obj);
+        if (force_key) 
+            kss_push(_this.renderizable_objects, force_key, foreach_obj);
     };
 
     const process_if = function(elem, parent, context) {
@@ -358,19 +353,36 @@ function KSS(object, root_element) {
         const iterator_key = loopvar
             .replace(/\$\$/g, foreach_obj.context+'.')
             .replace(/\#\#/g, '.');
-        const iterator = deep_proxy.get(iterator_key);
+            
+        let iterator = {};
+        if (foreach_obj.index == -1) {
+            iterator = deep_proxy.get(iterator_key);
+        } else { 
+            iterator[foreach_obj.index] = deep_proxy.get(iterator_key+'.'+foreach_obj.index);
+        }
+        
         try {
-            foreach_obj.elem.parentElement.querySelectorAll('[foreach_row="'+loopvar+'"]')
-                .forEach( e => e.remove() );
+            if (foreach_obj.index == -1)
+                foreach_obj.elem.parentElement.querySelectorAll('[foreach_row="'+loopvar+'"]')
+                    .forEach( e => e.remove() );
+                
             for (const i in iterator) {
                 const item = iterator[i];
                 const el = foreach_obj.elem.content.children[0].cloneNode(true);
                 el.context_alias = foreach_obj.item;
                 el.setAttribute('foreach_row', loopvar);
                 el.setAttribute('foreach_row_index', i);
+                el.setAttribute(':force-key', iterator_key+'.'+i);
                 foreach_obj.elem.parentNode.lastElementChild.after(el);
                 refresh(el, iterator_key+'.'+i);
             }
+            kss_push(_this.renderizable_objects, iterator_key+'.*', {
+                type: 'foreach',
+                elem: foreach_obj.elem,
+                parent: foreach_obj.parent,
+                context: iterator_key,
+                item: foreach_obj.item
+            });
         } catch(e) {
             console.warn(`KSS_ERROR: Problems at rendering foreach '${loopvar}' (${e.message})`);
         }
@@ -474,12 +486,14 @@ function KSS(object, root_element) {
         get_bounds(elem).forEach(b => process_bind(b, elem, context));
     };
     
-    const render_by_elem = function(elem = null, key = null) {
+    // index is used only for foreach items pushed or inserted
+    const render_by_elem = function(elem = null, key = null, index = -1) {
         const rendered_objects = [];
         const removables = [];
         const renderizable_objects = key
             ? {[key]: _this.renderizable_objects[key]}
             : _this.renderizable_objects;
+            
         for (const k in renderizable_objects) {
             (_this.renderizable_objects[k]??[]).reverse().forEach( (obj,i) => {
                 if (!obj.elem.isConnected) {
@@ -492,7 +506,9 @@ function KSS(object, root_element) {
                     o => o.type == obj.type && o.elem == obj.elem && o.expr == obj.expr)
                 ) return;
                 
-                if (obj.type == 'foreach') render_foreach(obj);
+                // foreach need a special treatment if an item is inserted or removed
+                if (obj.type == 'foreach') 
+                    render_foreach(index != -1 ? {...obj, index: index} : obj);
                 if (obj.type == 'if') render_if(obj);
                 if (obj.type == 'attr') render_attr(obj);
                 if (obj.type == 'text') render_text(obj);
@@ -503,16 +519,24 @@ function KSS(object, root_element) {
     };
     
     const render_by_key = function(key, extra) {
+        let index = -1;
+        let value;
         if (extra == '__removed__') {
             key = key.split('.').slice(0, -1).join('.');
-        } else if (extra == '__insert__') {
-            key = key.split('.').slice(0, -1).join('.');
-        } else if (extra == '__push__') {
-            key = key.split('.').slice(0, -1).join('.');
+        } else if (extra == '__insert__' || extra == '__push__') {
+            let keys = key.split('.');
+            [index, keys] = [keys.pop(), keys];
+            value = _this.rget(key);
+            key = keys.join('.') + '.*';
         }
-        console.log('KSS_UPDATE', key, _this.get(key));
+        console.log('KSS_UPDATE', key, value, _this.rget(key));
+        
         if (_this.renderizable_objects[key])
-            render_by_elem(null, key);
+            render_by_elem(null, key, index);
+        
+        _this.sandboxed_element.querySelectorAll('[\\:force-key="'+key+'"]').forEach( 
+            el => render_by_elem(el) 
+        );
     };
     
     ///////////////////////////////////////////////////////////////////////////////////////
@@ -539,6 +563,7 @@ function KSS(object, root_element) {
     this.merge = deep_proxy.merge;
     this.set = deep_proxy.set;
     this.upd = deep_proxy.upd;
+    this.rget = deep_proxy.rget;
     this.get = deep_proxy.get;
     this.rmv = deep_proxy.rmv;
     this.ins = deep_proxy.ins;
