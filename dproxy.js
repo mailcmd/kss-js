@@ -27,12 +27,14 @@ function DProxy(obj, callback) {
     };
 
     const _upd = function(fullKey, val) {
+        _this.is_upd = true;
         const arrKeys = fullKey.slice(1).split('.');
         let [key, keys] = [arrKeys.pop(), arrKeys];
         const obj = keys.reduce((o, k) => {
             return o[k];
         }, this);
         obj[key] = val;
+        _this.is_upd = false;
     };
 
     const _get = function(fullKey) {
@@ -90,9 +92,9 @@ function DProxy(obj, callback) {
         robj = robj ?? this.r;
         for (let key in obj) {
             if (robj == this.r) pobj[key]; // force a get
-            if (robj[key] === undefined) continue;
+            //if (robj[key] === undefined) continue;
             if (typeof obj[key] == 'object') {
-                _merge(obj[key], pobj[key], robj[key], bkey+'.'+key);
+                _merge.bind(this)(obj[key], pobj[key], robj[key], bkey+'.'+key);
             } else {
                 _this.fullKey = bkey;
                 pobj[key] = obj[key];
@@ -106,6 +108,10 @@ function DProxy(obj, callback) {
             // return the background real object
             if (obj == _this.mainObject && key == '_object') {
                 return _this.mainObject;
+            }
+            // return the fullKey status
+            if (obj == _this.mainObject && key == '_fullKey') {
+                return _this.fullKey;
             }
             // Special functions set/get/upd
             if (obj == _this.mainObject && key == 'set') {
@@ -180,9 +186,10 @@ function DProxy(obj, callback) {
             }
         },
         set(obj, key, val) {
-            if (typeof val == 'object') {
+            if (_this.is_upd && typeof val == 'object') {
                 _merge(val, _this.mainProxy.get(_this.fullKey+'.'+key), obj[key], _this.fullKey);
             } else {
+                if (obj == _this.mainObject) _this.fullKey = '';
                 obj[key] = val;
                 _this.callback(_this.fullKey+'.'+key, val, obj);
             }

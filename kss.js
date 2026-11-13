@@ -510,7 +510,7 @@ function KSS(object, root_element) {
         } else if (extra == '__push__') {
             key = key.split('.').slice(0, -1).join('.');
         }
-        // console.log('KSS_UPDATE', key, _this.get(key));
+        console.log('KSS_UPDATE', key, _this.get(key));
         if (_this.renderizable_objects[key])
             render_by_elem(null, key);
     };
@@ -617,7 +617,7 @@ KSS.include = async function(module, config = {}) {
             html: mod.html,
             tpl_id: mod.tpl_id,
             target: mod.target,
-            oninit: mod.oninit
+            oninit: mod.oninit  
         });
     } catch(e) {
         console.warn(`KSS_ERROR: Problems including module '${module}' (${e.message})`);

@@ -1,0 +1,20 @@
+<template kss-tpl-id="triangles">
+  <style>
+    .rect {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1px;
+      height: 1px;
+      background-color: red;
+      __border-radius: 50%;
+    }
+    .rect.last {
+      background-color: blue;
+    }
+  </style>
+
+  <div class="rect" :foreach="$$dots" :as="dot"
+       style="transform: translate(calc({$$dot.x}px - 50%), calc({$$dot.y}px - 50%));">
+  </div>
+</template>
