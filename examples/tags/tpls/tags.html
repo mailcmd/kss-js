@@ -19,7 +19,9 @@
   
   .helper {
     position: fixed;
-    height: 25vh;
+    height: auto;
+    max-height: 25vh;
+    width: 16rem;
     border: 1px solid black;
     background-color: #ddd;
     color: #555;
@@ -38,7 +40,7 @@
     <span class="tag" :foreach="$$tags" :as="item">{$$item}</span>
   </span>
   
-  <input type="text" :bind="$$tag" onkeyup="[$$add()]" onkeydown="[$$ctrl()]"/>
+  <input type="text" :bind="$$tag" onkeyup="[$$add()]"/>
 
   <select class="helper {$$tag == '' ? 'hide' : ''}" multiple onkeydown="[$$select()]"
        style="left: {$$helper_x}px; top: {$$helper_y}px;" >

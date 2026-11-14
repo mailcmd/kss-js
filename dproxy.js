@@ -91,11 +91,11 @@ function DProxy(obj, callback) {
     
     // key is used when the target is an object (not an array)
     const _push = function(value, key = null) {
-        const arr = _get.bind(this.mainObject)(this.fullKey);
+        const arr = _get.bind(this.mainObject)(this.push_fullKey);
         const pos = arr.constructor.name == 'Object' && key != null
             ? key
             : Object.values(arr).length;
-        _insert.bind({cb: this.callback, r: this.mainObject})(this.fullKey+'.'+pos, value, true);
+        _insert.bind({cb: this.callback, r: this.mainObject})(this.push_fullKey+'.'+pos, value, true);
     };
     
     const _merge = function(obj, pobj, robj, bkey = '') {
@@ -116,6 +116,8 @@ function DProxy(obj, callback) {
     // Generic proxy handler
     const handler = {
         get(obj, key, _) {
+            if (typeof(key) == 'symbol') return obj[key];
+            
             // return the background real object
             if (obj == _this.mainObject && key == '_object') {
                 return _this.mainObject;
@@ -154,9 +156,11 @@ function DProxy(obj, callback) {
             if (obj == _this.mainObject) _this.fullKey = '';
             
             if (obj.constructor.name == 'Array' && key == 'push') {
+                _this.push_fullKey = '.'+obj.ownIndex;
                 return _push.bind(_this);
             }
             if (obj.constructor.name == 'Object' && key == 'push') {
+                _this.push_fullKey = '.'+obj.ownIndex;
                 return _push.bind(_this);
             }
             

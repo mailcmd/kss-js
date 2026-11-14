@@ -375,7 +375,11 @@ function KSS(object, root_element) {
                 el.setAttribute('foreach_row', loopvar);
                 el.setAttribute('foreach_row_index', i);
                 el.setAttribute(':force-key', iterator_key+'.'+i);
-                foreach_obj.elem.parentNode.lastElementChild.after(el);
+                (
+                    foreach_obj.elem.parentNode.querySelector('[foreach_row="'+loopvar+'"]:last-child') 
+                    ??
+                    foreach_obj.elem
+                ).after(el);
                 refresh(el, iterator_key+'.'+i);
             }
             kss_push(_this.renderizable_objects, iterator_key+'.*', {
@@ -547,7 +551,9 @@ function KSS(object, root_element) {
         if (!this.initialized || force) {
             refresh(this.sandboxed_element, '');
             if (this.sandboxed_element.oninit) {
+                window.root_elem = _this.sandboxed_element;
                 this.sandboxed_element.oninit.bind(this.deep_proxy)();
+                delete window.root_elem;
             }
             this.initialized = true;
         }
@@ -646,6 +652,12 @@ KSS.include = async function(module, config = {}) {
             target: mod.target,
             oninit: mod.oninit  
         });
+        // Now we can sandbox globals
+        if (mod.globals) {
+            for (let k in mod.globals) {
+                window[k] = mod.globals[k];
+            }
+        }
     } catch(e) {
         console.warn(`KSS_ERROR: Problems including module '${module}' (${e.message})`);
         console.log(e);

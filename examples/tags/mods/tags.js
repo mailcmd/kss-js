@@ -1,7 +1,6 @@
 sandbox.datas = {
     tag: '',
     tags: [],
-    ctrl: () => (event.keyCode == 9 && event.preventDefault(), true),
     select: function() {
         if (event.keyCode == 13) {
             this.tag = event.target.selectedOptions[0].value;
@@ -10,32 +9,40 @@ sandbox.datas = {
         return true;
     },
     add: function() {
-        if (event.keyCode == 40) {
+        if (this.tag == '' && event.ctrlKey && event.keyCode == 8) {
+            this.tags = this.tags.slice(0, -1);
+            return true;
+        } else if (event.keyCode == 40) {
             root_elem.querySelector('.helper').focus();
+            root_elem.querySelector('.helper').selectedIndex = 0;
             return true;
         }
         this.tag = this.tag.toUpperCase().trim();
         this.helper = this.tag != '' 
-            ? this.list.filter(t => t.slice(0, this.tag.length) == this.tag)
+            ? list.filter(t => t.slice(0, this.tag.length) == this.tag)
             : [];
         if (this.tag != '') {
             this.helper_x = event.target.getBoundingClientRect().x;
             this.helper_y = event.target.getBoundingClientRect().y + 20;
         }
-        if (event.keyCode == 9) {
-            event.preventDefault();
-            this.tag = this.helper[0];
-            return true;
-        }
         if (event.keyCode != 13) return true;
-        if (!this.list.includes(this.tag)) return true;
-        this.ins('.tags.0', this.tag);
+        if (!list.includes(this.tag)) return true;
+        this.get('.tags').push(this.tag);
         this.tag = '';
         return true;
     },
     helper: [],
     helper_x: 0,
-    helper_y: 0,
+    helper_y: 0
+};
+sandbox.preload_tpls = ['tpls/tags.html'];
+sandbox.tpl_id = 'tags';
+sandbox.name = 'tags';
+sandbox.target = document.querySelector('#main');
+sandbox.oninit = function() {
+    root_elem.querySelector('input').focus();
+};
+sandbox.globals = {
     list: [
         '10-A-1',
         '10-B-1_10-C-1',
@@ -89,8 +96,4 @@ sandbox.datas = {
         '18-IN-1',
         '18-JN-1'
     ]
-};
-sandbox.preload_tpls = ['tpls/tags.html'];
-sandbox.tpl_id = 'tags';
-sandbox.name = 'tags';
-sandbox.target = document.querySelector('#main');
+}

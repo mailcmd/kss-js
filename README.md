@@ -5,6 +5,9 @@
 A small web reactive lib to do small projects without depend of big frameworks. 
 As the saying goes: *“Don't use a sledgehammer to kill a fly.”*
 
+## TODO
+- [ ] Array pop does not work
+
 ## DOC
 Someday...
 
