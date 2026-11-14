@@ -2,22 +2,40 @@ sandbox.datas = {
     tag: '',
     tags: [],
     ctrl: () => (event.keyCode == 9 && event.preventDefault(), true),
+    select: function() {
+        if (event.keyCode == 13) {
+            this.tag = event.target.selectedOptions[0].value;
+            event.target.previousElementSibling.focus();
+        }
+        return true;
+    },
     add: function() {
-        this.tag = this.tag.toUpperCase();
-        const s = this.list.find(t => t.slice(0, this.tag.length) == this.tag);
-        this.suggest = s ? s : '';
+        if (event.keyCode == 40) {
+            root_elem.querySelector('.helper').focus();
+            return true;
+        }
+        this.tag = this.tag.toUpperCase().trim();
+        this.helper = this.tag != '' 
+            ? this.list.filter(t => t.slice(0, this.tag.length) == this.tag)
+            : [];
+        if (this.tag != '') {
+            this.helper_x = event.target.getBoundingClientRect().x;
+            this.helper_y = event.target.getBoundingClientRect().y + 20;
+        }
         if (event.keyCode == 9) {
             event.preventDefault();
-            this.tag = this.suggest;
+            this.tag = this.helper[0];
             return true;
         }
         if (event.keyCode != 13) return true;
+        if (!this.list.includes(this.tag)) return true;
         this.ins('.tags.0', this.tag);
         this.tag = '';
-        this.suggest = '';
         return true;
     },
-    suggest: '',
+    helper: [],
+    helper_x: 0,
+    helper_y: 0,
     list: [
         '10-A-1',
         '10-B-1_10-C-1',

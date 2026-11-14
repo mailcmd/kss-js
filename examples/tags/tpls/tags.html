@@ -13,21 +13,24 @@
     border: 1px solid red;
     border-radius: 3px;
     margin-right: 3px;
+    color: white;
+    background-color: #c009;
   }
   
-  [suggest] {
-    position: relative;
+  .helper {
+    position: fixed;
+    height: 25vh;
+    border: 1px solid black;
+    background-color: #ddd;
+    color: #555;
+    overflow: scroll;
+  }
+    
+  .hide {
+    display: none;
   }
   
-  [suggest]::before {
-    content: attr(suggest);
-    position: absolute;
-    top: 4px;
-    left: 3px;
-    color: #7777;
-    font-family: arial;
-    font-size: 85%;
-  }
+  
 </style>
 
 <div class="box">
@@ -35,9 +38,15 @@
     <span class="tag" :foreach="$$tags" :as="item">{$$item}</span>
   </span>
   
-  <span suggest="{$$suggest}">
-    <input type="text" :bind="$$tag" onkeyup="[$$add()]" onkeydown="[$$ctrl()]"/>
-  </span>
+  <input type="text" :bind="$$tag" onkeyup="[$$add()]" onkeydown="[$$ctrl()]"/>
+
+  <select class="helper {$$tag == '' ? 'hide' : ''}" multiple onkeydown="[$$select()]"
+       style="left: {$$helper_x}px; top: {$$helper_y}px;" >
+    <option :foreach="$$helper" :as="item">
+      {$$item}
+    </option>
+  </select>
+
 </div>
 
 </template>

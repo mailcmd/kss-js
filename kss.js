@@ -131,7 +131,9 @@ function KSS(object, root_element) {
                 ${expr};
             }
         `);
+        window.root_elem = _this.sandboxed_element;
         fun.bind(_this.deep_proxy)(_this.deep_proxy.get(context));
+        delete window.root_elem;
     };
     ////////////////////////////////////////////////////////////////////////////////////////
     // Processors
@@ -646,6 +648,7 @@ KSS.include = async function(module, config = {}) {
         });
     } catch(e) {
         console.warn(`KSS_ERROR: Problems including module '${module}' (${e.message})`);
+        console.log(e);
     }
 };
 
