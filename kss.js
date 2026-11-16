@@ -19,11 +19,11 @@ function KSS(object, root_element) {
     // GETs
     ////////////////////////////////////////////////////////////////////////////////////////
     const get_foreachs = function(elem) {
-        return elem.querySelectorAll(':scope [\\:foreach]:not(template):not(template):not(kss-sandbox):not(:scope kss-sandbox *)');
+        return elem.querySelectorAll(':scope [\\:foreach]:not(template):not(kss-sandbox):not(:scope kss-sandbox *)');
     };
     
     const get_ifs = function(elem) {
-        return elem.querySelectorAll(':scope [\\:if]:not(template):not(template):not(kss-sandbox):not(:scope kss-sandbox *)');
+        return elem.querySelectorAll(':scope [\\:if]:not([\\:rendered]):not(template):not(kss-sandbox):not(:scope kss-sandbox *)');
     };
     
     const get_attributes = function(elem) {
@@ -166,7 +166,7 @@ function KSS(object, root_element) {
             index: -1
         };
         kss_push(_this.renderizable_objects, loopvar, foreach_obj);
-        if (force_key) 
+        if (force_key)
             kss_push(_this.renderizable_objects, force_key, foreach_obj);
     };
 
@@ -199,7 +199,8 @@ function KSS(object, root_element) {
                 elem: if_tpl,
                 parent: parent,
                 context: context,
-                value: 'true'
+                value: 'true',
+                expr: expr
             });
         });
         if (force_key) {
@@ -208,7 +209,8 @@ function KSS(object, root_element) {
                 elem: if_tpl,
                 parent: parent,
                 context: context,
-                value: 'true'
+                value: 'true',
+                expr: expr
             });
         }
         elem.remove();
@@ -226,7 +228,8 @@ function KSS(object, root_element) {
                     elem: else_tpl,
                     parent: parent,
                     context: context,
-                    value: 'false'
+                    value: 'false',
+                    expr: '!('+expr+')'
                 });
             });
             if (force_key) {
@@ -235,7 +238,8 @@ function KSS(object, root_element) {
                     elem: else_tpl,
                     parent: parent,
                     context: context,
-                    value: 'false'
+                    value: 'false',
+                    expr: '!('+expr+')'
                 });
             }
             elem.remove();
@@ -359,7 +363,7 @@ function KSS(object, root_element) {
         let iterator = {};
         if (foreach_obj.index == -1) {
             iterator = deep_proxy.get(iterator_key);
-        } else { 
+        } else {
             iterator[foreach_obj.index] = deep_proxy.get(iterator_key+'.'+foreach_obj.index);
         }
         
@@ -376,7 +380,7 @@ function KSS(object, root_element) {
                 el.setAttribute('foreach_row_index', i);
                 el.setAttribute(':force-key', iterator_key+'.'+i);
                 (
-                    foreach_obj.elem.parentNode.querySelector('[foreach_row="'+loopvar+'"]:last-child') 
+                    foreach_obj.elem.parentNode.querySelector('[foreach_row="'+loopvar+'"]:last-child')
                     ??
                     foreach_obj.elem
                 ).after(el);
@@ -395,9 +399,9 @@ function KSS(object, root_element) {
     };
     
     const render_if = function(if_obj) {
-        const expr = if_obj.elem.getAttribute(':if');
+        const expr = if_obj.expr;
         const result = eval(kss_eval(expr, if_obj.context));
-        
+
         if (![true, false].includes(result)) {
             console.warn(
                 'KSS_ERROR: Bad IF expression, ' +
@@ -410,6 +414,7 @@ function KSS(object, root_element) {
                 if_obj.elem.nextElementSibling.getAttribute(':if') != if_obj.value) {
                 const el = if_obj.elem.content.children[0].cloneNode(true);
                 el.setAttribute(':if', if_obj.value);
+                el.setAttribute(':rendered', 'true');
                 el.context_alias = if_obj.parent.context_alias;
                 if_obj.elem.after(el);
                 refresh(el, if_obj.context);
@@ -499,9 +504,11 @@ function KSS(object, root_element) {
         const renderizable_objects = key
             ? {[key]: _this.renderizable_objects[key]}
             : _this.renderizable_objects;
-            
+
         for (const k in renderizable_objects) {
-            (_this.renderizable_objects[k]??[]).reverse().forEach( (obj,i) => {
+            (_this.renderizable_objects[k]??[]).sort(
+                (a,b) => a.type == 'foreach' || a.type == 'if' ? -1 : 1
+            ).forEach( (obj,i) => {
                 if (!obj.elem.isConnected) {
                     _this.renderizable_objects[k].remove(i);
                     return;
@@ -513,7 +520,7 @@ function KSS(object, root_element) {
                 ) return;
                 
                 // foreach need a special treatment if an item is inserted or removed
-                if (obj.type == 'foreach') 
+                if (obj.type == 'foreach')
                     render_foreach(index != -1 ? {...obj, index: index} : obj);
                 if (obj.type == 'if') render_if(obj);
                 if (obj.type == 'attr') render_attr(obj);
@@ -535,13 +542,13 @@ function KSS(object, root_element) {
             value = _this.rget(key);
             key = keys.join('.') + '.*';
         }
-        //console.log('KSS_UPDATE', key, value, _this.rget(key));
+        // console.log('KSS_UPDATE', key, value, _this.renderizable_objects[key]);
         
         if (_this.renderizable_objects[key])
             render_by_elem(null, key, index);
         
-        _this.sandboxed_element.querySelectorAll('[\\:force-key="'+key+'"]').forEach( 
-            el => render_by_elem(el) 
+        _this.sandboxed_element.querySelectorAll('[\\:force-key="'+key+'"]').forEach(
+            el => render_by_elem(el)
         );
     };
     
@@ -641,7 +648,7 @@ KSS.include = async function(module, config = {}) {
             if ((/\//).test(tpl)) {
                 await KSS.loadtpl(tpl);
             } else {
-                tpl = module.split('/').slice(0, -1).join('/') + '/' + tpl;    
+                tpl = module.split('/').slice(0, -1).join('/') + '/' + tpl;
                 await KSS.loadtpl(tpl);
             }
         }
@@ -650,7 +657,7 @@ KSS.include = async function(module, config = {}) {
             html: mod.html,
             tpl_id: mod.tpl_id,
             target: mod.target,
-            oninit: mod.oninit  
+            oninit: mod.oninit
         });
         // Now we can sandbox globals
         if (mod.globals) {
@@ -727,14 +734,14 @@ KSS.init = function() {
 KSS.ready = KSS.init;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
-// Statics for websocket 
+// Statics for websocket
 ///////////////////////////////////////////////////////////////////////////////////////////////
 
 KSS.connection = null;
 
 KSS.connect = function(config) {
     /////////////////////////////////////////////////////////////////////////////////
-    // Internals 
+    // Internals
     /////////////////////////////////////////////////////////////////////////////////
     const onerror = function(error) {
         console.error('KSS Websocket error!', error);
@@ -797,7 +804,7 @@ KSS.connect = function(config) {
             msg = JSON.parse(data);
         } catch(e) {
             msg = data;
-        }        
+        }
         // normalize msg
         if (typeof msg != 'object')
             msg = {action: 'unknown', data: msg}
@@ -819,7 +826,7 @@ KSS.connect = function(config) {
             KSS.getSandbox(msg.sandbox).rmv(msg.key);
         } else if (msg.action == 'ins') {
             KSS.getSandbox(msg.sandbox).ins(msg.key, msg.data);
-        } 
+        }
     };
     
     /////////////////////////////////////////////////////////////////////////////////
@@ -844,7 +851,7 @@ KSS.connect = function(config) {
 // Before to go ahead, if bundle load is enabled, load dproxy auxiliar library.
 
 if (document.currentScript.getAttribute('load') == 'bundle') {
-    const dproxy = document.createElement('SCRIPT'); 
+    const dproxy = document.createElement('SCRIPT');
     dproxy.async = false;
     dproxy.src = document.currentScript.src.replace('kss.js', 'dproxy.js');
     document.currentScript.before(dproxy);
